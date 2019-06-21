@@ -1,0 +1,8 @@
+[package]
+name = "rujana-cli"
+version = "0.1.0"
+authors = ["Nathan Brei <nbrei@jlab.org>"]
+edition = "2018"
+
+[dependencies]
+rujana = { path = "../rujana" }

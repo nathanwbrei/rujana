@@ -1,0 +1,7 @@
+[package]
+name = "rujana"
+version = "0.1.0"
+authors = ["Nathan Brei <nbrei@jlab.org>"]
+edition = "2018"
+
+[dependencies]
