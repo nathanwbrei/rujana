@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::collections::BinaryHeap;
-use std::cmp::max;
 use std::cmp::Ordering;
 
 
@@ -59,38 +58,63 @@ impl Ord for Message {
     }
 }
 
+fn find_latest_complete_time(detector_time_map : &HashMap<SensorId,Option<Timestamp>>) -> Option<Timestamp> {
+    // map empty => return None
+    // at least one entry is None => return None
+    // otherwise => return Some(min(entries))
+
+    match detector_time_map.values().min() {
+        None => return None,
+        Some(x) => return x.clone()
+    }
+}
+
+
 // Sample { sensor_id : SensorId, timestamp : Timestamp, payload : Payload },
 // Heartbeat { sensor_id : SensorId, timestamp : Timestamp },
 // NewRun { timestamp : Timestamp },
 // Finished { timestamp : Timestamp }
 
 #[derive(Debug)]
-struct EventBuildingMailbox {
+pub struct EventBuildingMailbox {
     inbox : BinaryHeap<Message>,
     outbox : Vec<Message>,
-    latest_sample_times: HashMap<SensorId, Timestamp>,
-    latest_event_start : Timestamp,
-    latest_complete_time : Timestamp,
-    max_event_interval : Duration,
-    new_event_gap : Duration
+    latest_sample_times: HashMap<SensorId, Option<Timestamp>>,
+    latest_event_start : Option<Timestamp>,
+    latest_complete_time : Option<Timestamp>,
+    event_interval : Duration,
 }
 
 impl EventBuildingMailbox {
 
-    // Assume all Samples are sorted when we receive them
-    fn push(&mut self, samples: Vec<Message>) -> () {
-
-        let mut most_recent_time : Timestamp = self.latest_complete_time; // Need to clone?
-        for s in samples {
-            most_recent_time = max(most_recent_time, s.timestamp);
-            self.inbox.push(s);
-        }
-        self.latest_complete_time = most_recent_time;
-    }
 
     fn stage_next_event(&mut self) -> bool {
-        true
+        false
     }
+
+
+    // Assume all Samples are sorted when we receive them
+    fn push(&mut self, messages: Vec<Message>) -> () {
+
+        for m in messages {
+
+            let detector_id = m.sensor_id.clone();
+            let timestamp = m.timestamp.clone();
+            let prev = self.latest_sample_times.insert(detector_id, Some(timestamp));
+
+            match prev {
+                None => panic!("Unexpected detector!"),
+                Some(Some(t)) if t > timestamp => panic!("Partial ordering violation!"),
+                _ => ()
+            }
+
+            if m.tag != MessageTag::Heartbeat {
+                self.inbox.push(m);
+            }
+        }
+        self.latest_complete_time = find_latest_complete_time(&self.latest_sample_times);
+    }
+
 
 
     fn pop(&mut self, dest: &mut Vec<Message>) -> () {
@@ -103,18 +127,18 @@ impl EventBuildingMailbox {
     }
 
 
-    fn new(max_event_interval : Duration, new_event_gap : Duration) -> EventBuildingMailbox {
+    fn new(event_interval : Duration) -> EventBuildingMailbox {
 
         EventBuildingMailbox {inbox : BinaryHeap::new(),
                               outbox : Vec::new(),
                               latest_sample_times : HashMap::new(),
-                              latest_event_start : 0,
-                              latest_complete_time : 0,
-                              max_event_interval,
-                              new_event_gap
+                              latest_event_start : None,
+                              latest_complete_time : None,
+                              event_interval
                              }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -123,7 +147,7 @@ mod tests {
 
         use crate::event_builder::{EventBuildingMailbox, Message, MessageTag};
 
-        let mut mb = EventBuildingMailbox::new(10, 5);
+        let mut mb = EventBuildingMailbox::new(10);
         let mut batch = Vec::new();
 
         let sensor_a = String::from("bcal");
