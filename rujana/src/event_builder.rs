@@ -14,7 +14,7 @@ pub struct Message {
     pub tag : MessageTag,
     pub timestamp : Timestamp,
     pub sensor_id : SensorId,
-    pub payload : Vec<f32>
+    pub payload : f32
 }
 /*
 impl Message {
@@ -82,7 +82,34 @@ impl EventBuildingMailbox {
 
 
     fn stage_next_event(&mut self) -> bool {
-        false
+        loop {
+            let peek_time = match self.inbox.peek() {
+                None => return false,  // Haven't received any data yet
+                Some(m) => m.timestamp
+            };
+            let latest_complete_time = match self.latest_complete_time {
+                None => return false,  // Haven't received data from all detectors yet
+                Some(t) => t
+            };
+            let latest_event_start = match self.latest_event_start {
+                None => peek_time,  // Just now starting an event
+                Some(t) => t  // Event already underway from a previous call to stage()
+            };
+            if peek_time > latest_complete_time {
+                // We've consumed all messages up until the completion point
+                return false;
+            }
+            if latest_event_start + self.event_interval < peek_time {
+                // We've found a message which lies outside our current event
+                return true;
+            }
+            let next_message = match self.inbox.pop() {
+                None => return false, // Only way to get here is via race-condition
+                Some(m) => m
+            };
+            self.outbox.push(next_message);
+            self.latest_event_start = Some(latest_event_start);
+        }
     }
 
 
@@ -140,7 +167,7 @@ mod tests {
 
         use crate::event_builder::{EventBuildingMailbox, Message, MessageTag};
 
-        let mut mb = EventBuildingMailbox::new(10);
+        let mut mb = EventBuildingMailbox::new(10, ["bcal", "fcal"]);
         let mut batch = Vec::new();
 
         let sensor_a = String::from("bcal");
@@ -156,6 +183,11 @@ mod tests {
         println!("{:?}", mb);
 
         assert_eq!(crate::other::add(2,2), 4);
+    }
+
+    #[test]
+    fn better_test() {
+
     }
 }
 
