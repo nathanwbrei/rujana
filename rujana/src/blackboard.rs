@@ -1,10 +1,16 @@
-use super::types::Timestamp;
 
+
+
+pub trait Expert<T> {
+    fn process(&self, blackboard : &mut Blackboard, output : &mut Vec<T>) -> ();
+    fn update(&self, blackboard: &mut Blackboard) -> ();
+    // TODO: Figure out Metadata
+    // TODO: Figure out how to declare inputs
+}
 
 pub trait RetrievableBlackboard {
-    fn get_single<T>(tag : String) -> &T;
-    fn get<T>(tag : String) -> Vec<&T>;
-    fn get_metadata<T>(tag : String) -> T::Metadata; // TODO: Will this work?
+    fn get_single<T>(tag : String) -> & 'static T;
+    fn get<'a,T>(tag : String) -> Vec<&'a T>;
 }
 
 pub trait InsertableBlackboard {
@@ -13,12 +19,12 @@ pub trait InsertableBlackboard {
     fn insert<T>(ts : Vec<T>) -> ();
 }
 
-struct Blackboard {
-
+pub struct Blackboard {
+    // Probably gonna be a map<typeid<T>, Box<T>
 }
 
 impl Blackboard {
-    fn register(f : Factory, tag : String) -> () {}
+    fn register<T>(expert : &mut Expert<T>, tag : String) -> () {}
 }
 
 impl InsertableBlackboard for Blackboard {
@@ -30,5 +36,4 @@ impl InsertableBlackboard for Blackboard {
 
 //}
 
-
-    // TODO: Can we use a drain iterator instead?
+// TODO: Can we use a drain iterator instead?

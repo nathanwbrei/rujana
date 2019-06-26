@@ -1,5 +1,8 @@
 
+pub mod blackboard;
 pub mod event_builder;
+pub mod processing_controller;
+pub mod components;
 
 pub mod other {
     pub fn add(x:i64, y:i64) -> i64 {

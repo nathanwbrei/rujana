@@ -3,12 +3,8 @@
 use std::collections::HashMap;
 use std::collections::BinaryHeap;
 use std::cmp::Ordering;
+use crate::components::{Duration,Timestamp,SensorId};
 
-
-pub type SensorId = String;  // Not sure what these should be yet
-pub type Timestamp = u64;
-pub type Payload = f64;
-pub type Duration = u64;
 
 #[derive(Debug,PartialEq,Eq)]
 pub enum MessageTag { Sample, Heartbeat, NewRun, Finished }
@@ -18,7 +14,7 @@ pub struct Message {
     pub tag : MessageTag,
     pub timestamp : Timestamp,
     pub sensor_id : SensorId,
-    pub payload : Payload
+    pub payload : Vec<f32>
 }
 /*
 impl Message {
@@ -29,12 +25,9 @@ impl Message {
 
     }
     pub fn new_changerun() -> Message {
-
     }
     pub fn new_finish() -> Message {
-
     }
-
 }
 */
 
